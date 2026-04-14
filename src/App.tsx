@@ -96,8 +96,10 @@ function App() {
               </div>
             </header>
 
-            <div className="h-3/4 w-full relative px-2 pb-2">
-              <Fretboard />
+            <div className="h-3/4 w-full relative flex items-center justify-center py-8 px-4">
+              <div className="w-full h-full max-h-[65dvh]">
+                <Fretboard />
+              </div>
             </div>
           </section>
         )}

@@ -5,11 +5,12 @@ import { getFretMarkers, getNoteAtFret } from "../../utils/musicTheory";
 type FretProps = {
   fretIndex: number;
   widthRatio: number;
+  onFretClick: (stringIndex: number, fretIndex: number) => void;
 };
 
 const MARKER_FRETS = getFretMarkers();
 
-function Fret({ fretIndex, widthRatio }: FretProps) {
+function Fret({ fretIndex, widthRatio, onFretClick }: FretProps) {
   const hasMarker = MARKER_FRETS.includes(fretIndex);
   const isDouble = fretIndex === 12;
 
@@ -25,10 +26,11 @@ function Fret({ fretIndex, widthRatio }: FretProps) {
             <button
               key={`${stringIndex}-${fretIndex}`}
               type="button"
-              className="flex-1 w-full bg-transparent active:bg-zinc-200/10 transition-colors"
+              className="flex-1 w-full bg-transparent"
               onClick={() => {
                 console.log(`Clicked: ${stringIndex + 1}弦 - ${fretIndex}品`);
                 console.log(`Pitch: ${noteInfo.scientificPitch}`);
+                onFretClick(stringIndex, fretIndex);
               }}
               aria-label={`${stringIndex + 1}弦 ${fretIndex}品`}
             />
