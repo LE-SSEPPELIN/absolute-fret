@@ -37,18 +37,10 @@ function App() {
   }, [practiceMode]);
 
   return (
-    <div
-      className="h-screen w-full bg-zinc-950 text-zinc-50 overflow-hidden flex flex-col"
-      style={{
-        paddingTop: "env(safe-area-inset-top)",
-        paddingRight: "env(safe-area-inset-right)",
-        paddingBottom: "env(safe-area-inset-bottom)",
-        paddingLeft: "env(safe-area-inset-left)",
-      }}
-    >
-      <main className="w-full h-full max-w-6xl mx-auto flex flex-col">
+    <div className="h-screen w-full bg-zinc-950 text-zinc-50 overflow-hidden flex items-center justify-center p-4">
+      <main className="w-full max-w-6xl flex flex-col gap-y-8 md:gap-y-16">
         {screen === "lobby" ? (
-          <section className="w-full h-full flex items-center justify-center px-4">
+          <section className="w-full flex items-center justify-center">
             <div className="w-full max-w-md rounded-2xl bg-zinc-900/70 border border-zinc-700 p-6 shadow-xl">
               <h1 className="text-center text-2xl font-semibold tracking-wide mb-6">
                 Absolute Fret
@@ -72,8 +64,8 @@ function App() {
             </div>
           </section>
         ) : (
-          <section className="h-full w-full flex flex-col">
-            <header className="h-1/4 w-full relative flex items-center justify-between px-4">
+          <section className="w-full flex flex-col gap-y-8 md:gap-y-16">
+            <header className="relative w-full flex items-center justify-between">
               <button
                 type="button"
                 className="rounded-lg px-4 py-2 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 transition z-10"
@@ -96,10 +88,8 @@ function App() {
               </div>
             </header>
 
-            <div className="h-3/4 w-full relative flex items-center justify-center py-8 px-4">
-              <div className="w-full max-w-5xl mx-auto aspect-[100/34]">
-                <Fretboard />
-              </div>
+            <div className="w-full relative aspect-[100/34]">
+              <Fretboard />
             </div>
           </section>
         )}

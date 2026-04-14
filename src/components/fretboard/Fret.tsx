@@ -37,7 +37,7 @@ function Fret({ fretIndex, widthRatio, onFretClick, activeStringIndex }: FretPro
                 aria-label={`${stringIndex + 1}弦 ${fretIndex}品`}
               />
               {isActive ? (
-                <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[80%] h-[4px] bg-white/40 shadow-[0_0_12px_rgba(255,255,255,0.4)] rounded-full pointer-events-none" />
+                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[6px] bg-white/20 shadow-[0_0_20px_rgba(255,255,255,0.7)] rounded-full pointer-events-none" />
               ) : null}
             </div>
           );
