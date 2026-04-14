@@ -3,23 +3,28 @@ import Fret from "./Fret";
 import StringLine from "./String";
 import { FRET_WIDTH_RATIOS } from "../../utils/constants";
 
+type ActiveSegment = {
+  fretIndex: number;
+  stringIndex: number;
+};
+
 function Fretboard() {
-  const [activeStringIndex, setActiveStringIndex] = useState<number | null>(null);
+  const [activeSegment, setActiveSegment] = useState<ActiveSegment | null>(null);
 
   useEffect(() => {
-    if (activeStringIndex === null) {
+    if (activeSegment === null) {
       return;
     }
 
     const timer = window.setTimeout(() => {
-      setActiveStringIndex(null);
+      setActiveSegment(null);
     }, 180);
 
     return () => window.clearTimeout(timer);
-  }, [activeStringIndex]);
+  }, [activeSegment]);
 
-  const handleFretClick = (stringIndex: number) => {
-    setActiveStringIndex(stringIndex);
+  const handleFretClick = (stringIndex: number, fretIndex: number) => {
+    setActiveSegment({ stringIndex, fretIndex });
   };
 
   return (
@@ -31,13 +36,14 @@ function Fretboard() {
             fretIndex={index}
             widthRatio={ratio}
             onFretClick={handleFretClick}
+            activeStringIndex={activeSegment?.fretIndex === index ? activeSegment.stringIndex : null}
           />
         ))}
       </div>
 
       <div className="absolute inset-0 flex flex-col justify-around py-4 pointer-events-none z-10">
         {Array.from({ length: 6 }, (_, idx) => (
-          <StringLine key={`string-line-${idx}`} isActive={idx === activeStringIndex} />
+          <StringLine key={`string-line-${idx}`} />
         ))}
       </div>
     </div>
