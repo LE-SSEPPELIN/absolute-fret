@@ -1,9 +1,9 @@
 import { useMemo, useState } from "react";
 import Fretboard from "./components/fretboard/Fretboard";
 import QuestionDisplay from "./components/ui/QuestionDisplay";
+import Lobby from "./components/ui/Lobby";
 import { useGameLogic, type PracticeMode as GamePracticeMode } from "./hooks/useGameLogic";
 
-type Screen = "lobby" | "practice";
 type PracticeMode = "circle" | "interval" | null;
 
 type PracticeSessionProps = {
@@ -54,49 +54,24 @@ function PracticeSession({ mode, onBack }: PracticeSessionProps) {
 }
 
 function App() {
-  const [screen, setScreen] = useState<Screen>("lobby");
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(null);
 
   const enterPractice = (mode: Exclude<PracticeMode, null>) => {
     setPracticeMode(mode);
-    setScreen("practice");
   };
 
   const backToLobby = () => {
-    setScreen("lobby");
     setPracticeMode(null);
   };
 
   return (
     <div className="h-screen w-full bg-zinc-950 text-zinc-50 overflow-hidden flex items-center justify-center p-4">
       <main className="w-full max-w-6xl flex flex-col gap-y-8 md:gap-y-16">
-        {screen === "lobby" ? (
-          <section className="w-full flex items-center justify-center">
-            <div className="w-full max-w-md rounded-2xl bg-zinc-900/70 border border-zinc-700 p-6 shadow-xl">
-              <h1 className="text-center text-2xl font-semibold tracking-wide mb-6">
-                Absolute Fret
-              </h1>
-              <div className="flex flex-col gap-4">
-                <button
-                  type="button"
-                  className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 border border-zinc-600 py-4 text-lg font-medium transition"
-                  onClick={() => enterPractice("circle")}
-                >
-                  四 / 五度圈
-                </button>
-                <button
-                  type="button"
-                  className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 border border-zinc-600 py-4 text-lg font-medium transition"
-                  onClick={() => enterPractice("interval")}
-                >
-                  音程特训
-                </button>
-              </div>
-            </div>
-          </section>
-        ) : practiceMode ? (
+        {practiceMode === null ? (
+          <Lobby onSelectMode={enterPractice} />
+        ) : (
           <PracticeSession mode={practiceMode} onBack={backToLobby} />
-        ) : null}
+        )}
       </main>
     </div>
   );

@@ -5,6 +5,7 @@ import { getNoteAtFret } from "../utils/musicTheory";
 
 export type PracticeMode = "circle" | "interval";
 export type QuestionFeedback = "idle" | "correct" | "wrong";
+export type AppState = "lobby" | "playing";
 
 export type BoardPosition = {
   stringIndex: number;
@@ -95,6 +96,7 @@ export function useGameLogic(mode: PracticeMode) {
     null,
   );
   const [hintAnswers, setHintAnswers] = useState<BoardPosition[]>([]);
+  const [appState, setAppState] = useState<AppState>("lobby");
 
   const circleIndexRef = useRef(mode === "circle" ? 1 : 0);
   const wrongCountRef = useRef(0);
@@ -136,6 +138,18 @@ export function useGameLogic(mode: PracticeMode) {
     },
     [applyQuestion],
   );
+
+  const startGame = useCallback(() => {
+    setAppState("playing");
+  }, []);
+
+  const returnToLobby = useCallback(() => {
+    clearTimers();
+    setAppState("lobby");
+    setScore(0);
+    setCombo(0);
+    setIsTransitioning(false);
+  }, [clearTimers]);
 
   const handleFretClick = useCallback(
     async (stringIndex: number, fretIndex: number) => {
@@ -203,5 +217,8 @@ export function useGameLogic(mode: PracticeMode) {
     activeFeedbackCell,
     hintAnswers,
     handleFretClick,
+    appState,
+    startGame,
+    returnToLobby,
   };
 }

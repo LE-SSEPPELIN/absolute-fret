@@ -24,7 +24,7 @@ function QuestionDisplay({ questionText, modeTitle, feedback }: QuestionDisplayP
   return (
     <div className="select-none">
       <h2
-        className={`text-6xl md:text-7xl font-bold tracking-wide text-center transition-opacity duration-200 ${
+        className={`text-4xl md:text-5xl font-bold tracking-wide text-center transition-opacity duration-200 whitespace-nowrap ${
           FEEDBACK_CLASS[feedback]
         } ${visible ? "opacity-100" : "opacity-0"}`}
       >
