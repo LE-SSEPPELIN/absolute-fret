@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import Fret from "./Fret";
 import StringLine from "./String";
+import { useAudio } from "../../hooks/useAudio";
+import { getNoteAtFret } from "../../utils/musicTheory";
 import { FRET_WIDTH_RATIOS } from "../../utils/constants";
 
 type ActiveSegment = {
@@ -9,6 +11,7 @@ type ActiveSegment = {
 };
 
 function Fretboard() {
+  const { playNote } = useAudio();
   const [activeSegment, setActiveSegment] = useState<ActiveSegment | null>(null);
 
   useEffect(() => {
@@ -24,6 +27,8 @@ function Fretboard() {
   }, [activeSegment]);
 
   const handleFretClick = (stringIndex: number, fretIndex: number) => {
+    const { scientificPitch } = getNoteAtFret(stringIndex, fretIndex);
+    void playNote(scientificPitch);
     setActiveSegment({ stringIndex, fretIndex });
   };
 

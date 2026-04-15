@@ -1,6 +1,6 @@
 import { memo } from "react";
 import FretMarker from "./FretMarker";
-import { getFretMarkers, getNoteAtFret } from "../../utils/musicTheory";
+import { getFretMarkers } from "../../utils/musicTheory";
 
 type FretProps = {
   fretIndex: number;
@@ -22,7 +22,6 @@ function Fret({ fretIndex, widthRatio, onFretClick, activeStringIndex }: FretPro
     >
       <div className="absolute inset-0 flex flex-col justify-around py-4">
         {Array.from({ length: 6 }, (_, stringIndex) => {
-          const noteInfo = getNoteAtFret(stringIndex, fretIndex);
           const isActive = activeStringIndex === stringIndex;
           return (
             <div key={`${stringIndex}-${fretIndex}`} className="relative w-full h-8">
@@ -30,8 +29,6 @@ function Fret({ fretIndex, widthRatio, onFretClick, activeStringIndex }: FretPro
                 type="button"
                 className="absolute inset-0 w-full h-full bg-transparent"
                 onClick={() => {
-                  console.log(`Clicked: ${stringIndex + 1}弦 - ${fretIndex}品`);
-                  console.log(`Pitch: ${noteInfo.scientificPitch}`);
                   onFretClick(stringIndex, fretIndex);
                 }}
                 aria-label={`${stringIndex + 1}弦 ${fretIndex}品`}
