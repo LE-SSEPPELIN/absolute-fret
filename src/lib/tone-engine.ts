@@ -25,9 +25,9 @@ export function ensureToneEngine(): void {
     oscillator: { type: "sine" },
     envelope: {
       attack: 0.001,
-      decay: 0.3,
-      sustain: 0.4,
-      release: 1.5,
+      decay: 0.8,
+      sustain: 0.5,
+      release: 3.5,
     },
     modulation: { type: "square" },
     modulationEnvelope: {
