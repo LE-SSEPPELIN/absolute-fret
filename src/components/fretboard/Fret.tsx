@@ -6,12 +6,14 @@ type FretProps = {
   fretIndex: number;
   widthRatio: number;
   onFretClick: (stringIndex: number, fretIndex: number) => void;
-  activeStringIndex: number | null;
+  isTransitioning: boolean;
+  activeFeedbackCell: { stringIndex: number; fretIndex: number; state: "correct" | "wrong" } | null;
+  hintKeySet: Set<string>;
 };
 
 const MARKER_FRETS = getFretMarkers();
 
-function Fret({ fretIndex, widthRatio, onFretClick, activeStringIndex }: FretProps) {
+function Fret({ fretIndex, widthRatio, onFretClick, isTransitioning, activeFeedbackCell, hintKeySet }: FretProps) {
   const hasMarker = MARKER_FRETS.includes(fretIndex);
   const isDouble = fretIndex === 12;
 
@@ -22,19 +24,34 @@ function Fret({ fretIndex, widthRatio, onFretClick, activeStringIndex }: FretPro
     >
       <div className="absolute inset-0 flex flex-col justify-around py-4">
         {Array.from({ length: 6 }, (_, stringIndex) => {
-          const isActive = activeStringIndex === stringIndex;
+          const cellKey = `${stringIndex}-${fretIndex}`;
+          const isActiveFeedback =
+            activeFeedbackCell?.stringIndex === stringIndex && activeFeedbackCell?.fretIndex === fretIndex;
+          const glowState = isActiveFeedback ? activeFeedbackCell.state : hintKeySet.has(cellKey) ? "hint" : "idle";
+          const glowClass =
+            glowState === "correct"
+              ? "bg-green-400/30 shadow-[0_0_20px_rgba(74,222,128,0.8)]"
+              : glowState === "wrong"
+                ? "bg-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.8)]"
+                : glowState === "hint"
+                  ? "bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.5)] animate-pulse"
+                  : "bg-white/20 shadow-[0_0_20px_rgba(255,255,255,0.7)]";
+
           return (
             <div key={`${stringIndex}-${fretIndex}`} className="relative w-full h-8">
               <button
                 type="button"
                 className="absolute inset-0 w-full h-full bg-transparent"
+                disabled={isTransitioning}
                 onClick={() => {
                   onFretClick(stringIndex, fretIndex);
                 }}
                 aria-label={`${stringIndex + 1}弦 ${fretIndex}品`}
               />
-              {isActive ? (
-                <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-[6px] bg-white/20 shadow-[0_0_20px_rgba(255,255,255,0.7)] rounded-full pointer-events-none" />
+              {glowState !== "idle" ? (
+                <div
+                  className={`absolute left-0 top-1/2 -translate-y-1/2 w-full h-[8px] rounded-full pointer-events-none ${glowClass}`}
+                />
               ) : null}
             </div>
           );
