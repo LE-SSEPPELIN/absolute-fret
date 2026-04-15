@@ -3,9 +3,9 @@ import { useCallback, useEffect } from "react";
 import { disposeToneEngine, playGuitarNote } from "../lib/tone-engine";
 
 export function useAudio() {
-  const playNote = useCallback(async (scientificPitch: string) => {
+  const playNote = useCallback(async (toneParam: string) => {
     await Tone.start();
-    playGuitarNote(scientificPitch);
+    playGuitarNote(toneParam);
   }, []);
 
   useEffect(() => {

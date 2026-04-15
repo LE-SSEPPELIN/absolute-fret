@@ -27,8 +27,8 @@ function Fretboard() {
   }, [activeSegment]);
 
   const handleFretClick = (stringIndex: number, fretIndex: number) => {
-    const { scientificPitch } = getNoteAtFret(stringIndex, fretIndex);
-    void playNote(scientificPitch);
+    const { toneParam } = getNoteAtFret(stringIndex, fretIndex);
+    void playNote(toneParam);
     setActiveSegment({ stringIndex, fretIndex });
   };
 

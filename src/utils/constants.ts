@@ -19,10 +19,10 @@ export const CHROMATIC_SCALE = [
 ] as const;
 
 export const currentTuning = [
-  { note: "E", octave: 2 },
-  { note: "A", octave: 2 },
-  { note: "D", octave: 3 },
-  { note: "G", octave: 3 },
-  { note: "B", octave: 3 },
-  { note: "E", octave: 4 },
+  { note: "E", octave: 4 }, // 1弦 (最上, 最细)
+  { note: "B", octave: 3 }, // 2弦
+  { note: "G", octave: 3 }, // 3弦
+  { note: "D", octave: 3 }, // 4弦
+  { note: "A", octave: 2 }, // 5弦
+  { note: "E", octave: 2 }, // 6弦 (最下, 最粗)
 ] as const;

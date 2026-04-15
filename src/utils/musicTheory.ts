@@ -3,26 +3,25 @@ import { CHROMATIC_SCALE, currentTuning } from "./constants";
 export type NoteAtFret = {
   note: string;
   octave: number;
-  scientificPitch: string;
+  toneParam: string;
 };
 
 export function getNoteAtFret(stringIndex: number, fretIndex: number): NoteAtFret {
-  const openString = currentTuning[stringIndex];
-  const startIndex = CHROMATIC_SCALE.indexOf(openString.note);
+  const tuning = currentTuning[stringIndex];
+  const baseNoteIndex = CHROMATIC_SCALE.indexOf(tuning.note);
 
-  if (startIndex < 0) {
-    throw new Error(`Unknown tuning note: ${openString.note}`);
+  if (baseNoteIndex < 0) {
+    throw new Error(`Unknown tuning note: ${tuning.note}`);
   }
 
-  const chromaticIndex = (startIndex + fretIndex) % CHROMATIC_SCALE.length;
-  const octaveOffset = Math.floor((startIndex + fretIndex) / CHROMATIC_SCALE.length);
-  const note = CHROMATIC_SCALE[chromaticIndex];
-  const octave = openString.octave + octaveOffset;
+  const absoluteSemitones = tuning.octave * 12 + baseNoteIndex + fretIndex;
+  const targetOctave = Math.floor(absoluteSemitones / 12);
+  const targetNote = CHROMATIC_SCALE[absoluteSemitones % 12];
 
   return {
-    note,
-    octave,
-    scientificPitch: `${note}${octave}`,
+    note: targetNote,
+    octave: targetOctave,
+    toneParam: `${targetNote}${targetOctave}`,
   };
 }
 
