@@ -12,6 +12,12 @@ export type BoardPosition = {
   fretIndex: number;
 };
 
+export type GameConfig = {
+  strings: number[];
+  modeLength: number | "endless";
+  subOptions: string[];
+};
+
 type IntervalOption = {
   name: string;
   semitones: number;
@@ -97,12 +103,14 @@ export function useGameLogic(mode: PracticeMode) {
   );
   const [hintAnswers, setHintAnswers] = useState<BoardPosition[]>([]);
   const [appState, setAppState] = useState<AppState>("lobby");
+  const [config, setConfig] = useState<GameConfig | null>(null);
 
   const circleIndexRef = useRef(mode === "circle" ? 1 : 0);
   const wrongCountRef = useRef(0);
   const currentQuestionRef = useRef<QuestionPayload | null>(initialQuestion);
   const clearFeedbackTimerRef = useRef<number | null>(null);
   const transitionTimerRef = useRef<number | null>(null);
+  const questionCounterRef = useRef(0);
 
   const clearTimers = useCallback(() => {
     if (clearFeedbackTimerRef.current !== null) {
@@ -139,13 +147,22 @@ export function useGameLogic(mode: PracticeMode) {
     [applyQuestion],
   );
 
-  const startGame = useCallback(() => {
+  const startGame = useCallback((selectedConfig: GameConfig) => {
+    setConfig(selectedConfig);
     setAppState("playing");
-  }, []);
+    setScore(0);
+    setCombo(0);
+    setIsTransitioning(false);
+    questionCounterRef.current = 0;
+    circleIndexRef.current = mode === "circle" ? 1 : 0;
+    wrongCountRef.current = 0;
+    applyQuestion(mode === "circle" ? buildCircleQuestion(0) : buildIntervalQuestion());
+  }, [mode, applyQuestion]);
 
   const returnToLobby = useCallback(() => {
     clearTimers();
     setAppState("lobby");
+    setConfig(null);
     setScore(0);
     setCombo(0);
     setIsTransitioning(false);
@@ -218,6 +235,7 @@ export function useGameLogic(mode: PracticeMode) {
     hintAnswers,
     handleFretClick,
     appState,
+    config,
     startGame,
     returnToLobby,
   };

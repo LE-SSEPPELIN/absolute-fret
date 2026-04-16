@@ -2,7 +2,8 @@ import { useMemo, useState } from "react";
 import Fretboard from "./components/fretboard/Fretboard";
 import QuestionDisplay from "./components/ui/QuestionDisplay";
 import Lobby from "./components/ui/Lobby";
-import { useGameLogic, type PracticeMode as GamePracticeMode } from "./hooks/useGameLogic";
+import ConfigPanel from "./components/ui/ConfigPanel";
+import { useGameLogic, type PracticeMode as GamePracticeMode, type GameConfig } from "./hooks/useGameLogic";
 
 type PracticeMode = "circle" | "interval" | null;
 
@@ -55,6 +56,22 @@ function PracticeSession({ mode, onBack }: PracticeSessionProps) {
 
 function App() {
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(null);
+  const [selectedModeForConfig, setSelectedModeForConfig] = useState<PracticeMode>(null);
+
+  const handleSelectMode = (mode: Exclude<PracticeMode, null>) => {
+    setSelectedModeForConfig(mode);
+  };
+
+  const handleConfigStart = (_config: GameConfig) => {
+    if (selectedModeForConfig) {
+      enterPractice(selectedModeForConfig);
+      setSelectedModeForConfig(null);
+    }
+  };
+
+  const handleConfigCancel = () => {
+    setSelectedModeForConfig(null);
+  };
 
   const enterPractice = (mode: Exclude<PracticeMode, null>) => {
     setPracticeMode(mode);
@@ -62,13 +79,22 @@ function App() {
 
   const backToLobby = () => {
     setPracticeMode(null);
+    setSelectedModeForConfig(null);
   };
 
   return (
     <div className="h-screen w-full bg-zinc-950 text-zinc-50 overflow-hidden flex items-center justify-center p-4">
       <main className="w-full max-w-6xl flex flex-col gap-y-8 md:gap-y-16">
         {practiceMode === null ? (
-          <Lobby onSelectMode={enterPractice} />
+          selectedModeForConfig ? (
+            <ConfigPanel
+              mode={selectedModeForConfig}
+              onStart={handleConfigStart}
+              onCancel={handleConfigCancel}
+            />
+          ) : (
+            <Lobby onSelectMode={handleSelectMode} />
+          )
         ) : (
           <PracticeSession mode={practiceMode} onBack={backToLobby} />
         )}
