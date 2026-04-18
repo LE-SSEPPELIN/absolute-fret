@@ -7,7 +7,14 @@ type ConfigPanelProps = {
   onCancel: () => void;
 };
 
-const STRING_NAMES = ["E (6弦)", "A (5弦)", "D (4弦)", "G (3弦)", "B (2弦)", "E (1弦)"];
+const STRING_OPTIONS = [
+  { label: "E (6弦)", value: 5 },
+  { label: "A (5弦)", value: 4 },
+  { label: "D (4弦)", value: 3 },
+  { label: "G (3弦)", value: 2 },
+  { label: "B (2弦)", value: 1 },
+  { label: "E (1弦)", value: 0 },
+];
 
 const CIRCLE_MODES = [
   { id: "P4", label: "四度圈" },
@@ -31,7 +38,7 @@ const INTERVAL_OPTIONS = [
 function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
   const [selectedStrings, setSelectedStrings] = useState<number[]>([0, 1, 2, 3, 4, 5]);
   const [modeLength, setModeLength] = useState<number | "endless">(20);
-  const [selectedSubOptions, setSelectedSubOptions] = useState<string[]>(mode === "circle" ? ["P4", "P5"] : []);
+  const [selectedSubOptions, setSelectedSubOptions] = useState<string[]>(mode === "circle" ? ["P4"] : []);
 
   const toggleString = (stringIndex: number) => {
     setSelectedStrings((prev) => {
@@ -44,6 +51,9 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
 
   const toggleSubOption = (optionId: string) => {
     setSelectedSubOptions((prev) => {
+      if (mode === "circle") {
+        return [optionId];
+      }
       if (prev.includes(optionId)) {
         return prev.filter((o) => o !== optionId);
       }
@@ -93,20 +103,20 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
           <div className="space-y-3">
             <label className="text-sm font-medium text-zinc-300">练习弦数</label>
             <div className="grid grid-cols-3 gap-3">
-              {STRING_NAMES.map((name, index) => {
-                const isSelected = selectedStrings.includes(index);
+              {STRING_OPTIONS.map((stringOption, index) => {
+                const isSelected = selectedStrings.includes(stringOption.value);
                 return (
                   <button
                     key={index}
                     type="button"
-                    onClick={() => toggleString(index)}
+                    onClick={() => toggleString(stringOption.value)}
                     className={`py-3 rounded-lg border transition ${
                       isSelected
                         ? "bg-zinc-700 border-zinc-500 text-white"
                         : "bg-zinc-800 border-zinc-700 text-zinc-500 hover:bg-zinc-700"
                     }`}
                   >
-                    <span className="font-bold">{name}</span>
+                    <span className="font-bold">{stringOption.label}</span>
                   </button>
                 );
               })}
@@ -136,6 +146,8 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
                     <button
                       key={opt.id}
                       type="button"
+                      role="radio"
+                      aria-checked={isSelected}
                       onClick={() => toggleSubOption(opt.id)}
                       className={`py-3 rounded-lg border transition ${
                         isSelected

@@ -9,9 +9,10 @@ type FretboardProps = {
   isTransitioning: boolean;
   activeFeedbackCell: (BoardPosition & { state: "correct" | "wrong" }) | null;
   hintAnswers: BoardPosition[];
+  activeStrings: number[];
 };
 
-function Fretboard({ onFretClick, isTransitioning, activeFeedbackCell, hintAnswers }: FretboardProps) {
+function Fretboard({ onFretClick, isTransitioning, activeFeedbackCell, hintAnswers, activeStrings }: FretboardProps) {
   const hintKeySet = useMemo(
     () => new Set(hintAnswers.map((pos) => `${pos.stringIndex}-${pos.fretIndex}`)),
     [hintAnswers],
@@ -29,13 +30,14 @@ function Fretboard({ onFretClick, isTransitioning, activeFeedbackCell, hintAnswe
             isTransitioning={isTransitioning}
             activeFeedbackCell={activeFeedbackCell}
             hintKeySet={hintKeySet}
+            activeStrings={activeStrings}
           />
         ))}
       </div>
 
       <div className="absolute inset-0 flex flex-col justify-around py-4 pointer-events-none z-10">
         {Array.from({ length: 6 }, (_, idx) => (
-          <StringLine key={`string-line-${idx}`} />
+          <StringLine key={`string-line-${idx}`} stringIndex={idx} activeStrings={activeStrings} />
         ))}
       </div>
     </div>

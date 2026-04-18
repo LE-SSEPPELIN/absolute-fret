@@ -5,7 +5,6 @@ import { getNoteAtFret } from "../utils/musicTheory";
 
 export type PracticeMode = "circle" | "interval";
 export type QuestionFeedback = "idle" | "correct" | "wrong";
-export type AppState = "lobby" | "playing";
 
 export type BoardPosition = {
   stringIndex: number;
@@ -19,6 +18,7 @@ export type GameConfig = {
 };
 
 type IntervalOption = {
+  id: string;
   name: string;
   semitones: number;
 };
@@ -30,18 +30,26 @@ type QuestionPayload = {
 };
 
 const FRET_COUNT = 14;
+const ALL_STRINGS = [0, 1, 2, 3, 4, 5];
+const DEFAULT_GAME_CONFIG: GameConfig = {
+  strings: ALL_STRINGS,
+  modeLength: 20,
+  subOptions: [],
+};
 const CIRCLE_OF_FOURTHS = ["C", "F", "A#", "D#", "G#", "C#", "F#", "B", "E", "A", "D", "G"] as const;
+const CIRCLE_OF_FIFTHS = ["C", "G", "D", "A", "E", "B", "F#", "C#", "G#", "D#", "A#", "F"] as const;
 const INTERVAL_OPTIONS: IntervalOption[] = [
-  { name: "小二度", semitones: 1 },
-  { name: "大二度", semitones: 2 },
-  { name: "小三度", semitones: 3 },
-  { name: "大三度", semitones: 4 },
-  { name: "纯四度", semitones: 5 },
-  { name: "纯五度", semitones: 7 },
-  { name: "小六度", semitones: 8 },
-  { name: "大六度", semitones: 9 },
-  { name: "小七度", semitones: 10 },
-  { name: "大七度", semitones: 11 },
+  { id: "m2", name: "小二度", semitones: 1 },
+  { id: "M2", name: "大二度", semitones: 2 },
+  { id: "m3", name: "小三度", semitones: 3 },
+  { id: "M3", name: "大三度", semitones: 4 },
+  { id: "P4", name: "纯四度", semitones: 5 },
+  { id: "P5", name: "纯五度", semitones: 7 },
+  { id: "m6", name: "小六度", semitones: 8 },
+  { id: "M6", name: "大六度", semitones: 9 },
+  { id: "m7", name: "小七度", semitones: 10 },
+  { id: "M7", name: "大七度", semitones: 11 },
+  { id: "P8", name: "纯八度", semitones: 12 },
 ];
 type ChromaticNote = (typeof CHROMATIC_SCALE)[number];
 
@@ -49,10 +57,22 @@ function randomIndex(maxExclusive: number): number {
   return Math.floor(Math.random() * maxExclusive);
 }
 
-function buildValidAnswers(targetNote: string): BoardPosition[] {
+function getActiveStrings(config: GameConfig): number[] {
+  const normalized = config.strings
+    .filter((stringIndex) => stringIndex >= 0 && stringIndex < currentTuning.length)
+    .sort((a, b) => a - b);
+
+  if (normalized.length > 0) {
+    return normalized;
+  }
+
+  return ALL_STRINGS;
+}
+
+function buildValidAnswers(targetNote: string, activeStrings: number[]): BoardPosition[] {
   const positions: BoardPosition[] = [];
 
-  for (let stringIndex = 0; stringIndex < currentTuning.length; stringIndex += 1) {
+  for (const stringIndex of activeStrings) {
     for (let fretIndex = 0; fretIndex < FRET_COUNT; fretIndex += 1) {
       const note = getNoteAtFret(stringIndex, fretIndex).note;
       if (note === targetNote) {
@@ -64,33 +84,41 @@ function buildValidAnswers(targetNote: string): BoardPosition[] {
   return positions;
 }
 
-function buildCircleQuestion(index: number): QuestionPayload {
-  const targetNote = CIRCLE_OF_FOURTHS[index % CIRCLE_OF_FOURTHS.length];
+function buildCircleQuestion(index: number, config: GameConfig): QuestionPayload {
+  const activeStrings = getActiveStrings(config);
+  const circlePool = config.subOptions.includes("P5") ? CIRCLE_OF_FIFTHS : CIRCLE_OF_FOURTHS;
+  const targetNote = circlePool[index % circlePool.length];
+
   return {
     targetNote,
     questionText: targetNote,
-    validAnswers: buildValidAnswers(targetNote),
+    validAnswers: buildValidAnswers(targetNote, activeStrings),
   };
 }
 
-function buildIntervalQuestion(): QuestionPayload {
-  const rootString = randomIndex(currentTuning.length);
+function buildIntervalQuestion(config: GameConfig): QuestionPayload {
+  const activeStrings = getActiveStrings(config);
+  const selectedIntervals = INTERVAL_OPTIONS.filter((option) => config.subOptions.includes(option.id));
+  const availableIntervals = selectedIntervals.length > 0 ? selectedIntervals : INTERVAL_OPTIONS;
+
+  const rootString = activeStrings[randomIndex(activeStrings.length)]!;
   const rootFret = randomIndex(FRET_COUNT);
   const rootInfo = getNoteAtFret(rootString, rootFret);
-  const interval = INTERVAL_OPTIONS[randomIndex(INTERVAL_OPTIONS.length)]!;
+  const interval = availableIntervals[randomIndex(availableIntervals.length)]!;
   const rootIndex = CHROMATIC_SCALE.indexOf(rootInfo.note as ChromaticNote);
   const targetNote = CHROMATIC_SCALE[(rootIndex + interval.semitones) % CHROMATIC_SCALE.length]!;
 
   return {
     targetNote,
     questionText: `${currentTuning[rootString]!.note}弦 - ${rootInfo.note} + ${interval.name}`,
-    validAnswers: buildValidAnswers(targetNote),
+    validAnswers: buildValidAnswers(targetNote, activeStrings),
   };
 }
 
-export function useGameLogic(mode: PracticeMode) {
+export function useGameLogic(mode: PracticeMode, config: GameConfig) {
   const { playNote } = useAudio();
-  const initialQuestion = mode === "circle" ? buildCircleQuestion(0) : buildIntervalQuestion();
+  const normalizedConfig = config ?? DEFAULT_GAME_CONFIG;
+  const initialQuestion = mode === "circle" ? buildCircleQuestion(0, normalizedConfig) : buildIntervalQuestion(normalizedConfig);
 
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -102,15 +130,12 @@ export function useGameLogic(mode: PracticeMode) {
     null,
   );
   const [hintAnswers, setHintAnswers] = useState<BoardPosition[]>([]);
-  const [appState, setAppState] = useState<AppState>("lobby");
-  const [config, setConfig] = useState<GameConfig | null>(null);
 
   const circleIndexRef = useRef(mode === "circle" ? 1 : 0);
   const wrongCountRef = useRef(0);
   const currentQuestionRef = useRef<QuestionPayload | null>(initialQuestion);
   const clearFeedbackTimerRef = useRef<number | null>(null);
   const transitionTimerRef = useRef<number | null>(null);
-  const questionCounterRef = useRef(0);
 
   const clearTimers = useCallback(() => {
     if (clearFeedbackTimerRef.current !== null) {
@@ -133,46 +158,20 @@ export function useGameLogic(mode: PracticeMode) {
     setActiveFeedbackCell(null);
   }, []);
 
-  const pushNextQuestion = useCallback(
-    (currentMode: PracticeMode) => {
-      if (currentMode === "circle") {
-        const question = buildCircleQuestion(circleIndexRef.current);
-        circleIndexRef.current += 1;
-        applyQuestion(question);
-        return;
-      }
+  const pushNextQuestion = useCallback(() => {
+    if (mode === "circle") {
+      const question = buildCircleQuestion(circleIndexRef.current, normalizedConfig);
+      circleIndexRef.current += 1;
+      applyQuestion(question);
+      return;
+    }
 
-      applyQuestion(buildIntervalQuestion());
-    },
-    [applyQuestion],
-  );
-
-  const startGame = useCallback((selectedConfig: GameConfig) => {
-    setConfig(selectedConfig);
-    setAppState("playing");
-    setScore(0);
-    setCombo(0);
-    setIsTransitioning(false);
-    questionCounterRef.current = 0;
-    circleIndexRef.current = mode === "circle" ? 1 : 0;
-    wrongCountRef.current = 0;
-    applyQuestion(mode === "circle" ? buildCircleQuestion(0) : buildIntervalQuestion());
-  }, [mode, applyQuestion]);
-
-  const returnToLobby = useCallback(() => {
-    clearTimers();
-    setAppState("lobby");
-    setConfig(null);
-    setScore(0);
-    setCombo(0);
-    setIsTransitioning(false);
-  }, [clearTimers]);
+    applyQuestion(buildIntervalQuestion(normalizedConfig));
+  }, [applyQuestion, mode, normalizedConfig]);
 
   const handleFretClick = useCallback(
     async (stringIndex: number, fretIndex: number) => {
-      if (isTransitioning) {
-        return;
-      }
+      if (isTransitioning) return;
 
       const question = currentQuestionRef.current;
       if (!question) {
@@ -193,8 +192,8 @@ export function useGameLogic(mode: PracticeMode) {
         setIsTransitioning(true);
 
         transitionTimerRef.current = window.setTimeout(() => {
+          pushNextQuestion();
           setIsTransitioning(false);
-          pushNextQuestion(mode);
         }, 400);
         return;
       }
@@ -217,7 +216,7 @@ export function useGameLogic(mode: PracticeMode) {
         setActiveFeedbackCell(null);
       }, 140);
     },
-    [clearTimers, isTransitioning, mode, playNote, pushNextQuestion],
+    [clearTimers, isTransitioning, playNote, pushNextQuestion],
   );
 
   useEffect(() => {
@@ -234,9 +233,5 @@ export function useGameLogic(mode: PracticeMode) {
     activeFeedbackCell,
     hintAnswers,
     handleFretClick,
-    appState,
-    config,
-    startGame,
-    returnToLobby,
   };
 }

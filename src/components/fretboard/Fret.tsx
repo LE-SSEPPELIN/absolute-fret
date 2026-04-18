@@ -9,11 +9,12 @@ type FretProps = {
   isTransitioning: boolean;
   activeFeedbackCell: { stringIndex: number; fretIndex: number; state: "correct" | "wrong" } | null;
   hintKeySet: Set<string>;
+  activeStrings: number[];
 };
 
 const MARKER_FRETS = getFretMarkers();
 
-function Fret({ fretIndex, widthRatio, onFretClick, isTransitioning, activeFeedbackCell, hintKeySet }: FretProps) {
+function Fret({ fretIndex, widthRatio, onFretClick, isTransitioning, activeFeedbackCell, hintKeySet, activeStrings }: FretProps) {
   const hasMarker = MARKER_FRETS.includes(fretIndex);
   const isDouble = fretIndex === 12;
 
@@ -24,6 +25,7 @@ function Fret({ fretIndex, widthRatio, onFretClick, isTransitioning, activeFeedb
     >
       <div className="absolute inset-0 flex flex-col justify-around py-4">
         {Array.from({ length: 6 }, (_, stringIndex) => {
+          const isStringActive = activeStrings.includes(stringIndex);
           const cellKey = `${stringIndex}-${fretIndex}`;
           const isActiveFeedback =
             activeFeedbackCell?.stringIndex === stringIndex && activeFeedbackCell?.fretIndex === fretIndex;
@@ -41,9 +43,12 @@ function Fret({ fretIndex, widthRatio, onFretClick, isTransitioning, activeFeedb
             <div key={`${stringIndex}-${fretIndex}`} className="relative w-full h-8">
               <button
                 type="button"
-                className="absolute inset-0 w-full h-full bg-transparent"
-                disabled={isTransitioning}
+                className={`absolute inset-0 w-full h-full bg-transparent ${isStringActive ? "cursor-pointer" : "cursor-default"}`}
+                disabled={isTransitioning || !isStringActive}
                 onClick={() => {
+                  if (!isStringActive) {
+                    return;
+                  }
                   onFretClick(stringIndex, fretIndex);
                 }}
                 aria-label={`${stringIndex + 1}弦 ${fretIndex}品`}

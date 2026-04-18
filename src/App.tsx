@@ -9,17 +9,19 @@ type PracticeMode = "circle" | "interval" | null;
 
 type PracticeSessionProps = {
   mode: GamePracticeMode;
+  config: GameConfig;
   onBack: () => void;
 };
 
-function PracticeSession({ mode, onBack }: PracticeSessionProps) {
+function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
   const { score, combo, isTransitioning, questionText, questionFeedback, activeFeedbackCell, hintAnswers, handleFretClick } =
-    useGameLogic(mode);
+    useGameLogic(mode, config);
 
   const modeTitle = useMemo(() => {
-    if (mode === "circle") return "四/五度圈";
-    return "音程特训";
-  }, [mode]);
+    if (mode === "interval") return "音程练习";
+    if (config.subOptions.includes("P5")) return "五度圈练习";
+    return "四度圈练习";
+  }, [config.subOptions, mode]);
 
   return (
     <section className="w-full flex flex-col gap-y-8 md:gap-y-16">
@@ -48,6 +50,7 @@ function PracticeSession({ mode, onBack }: PracticeSessionProps) {
           isTransitioning={isTransitioning}
           activeFeedbackCell={activeFeedbackCell}
           hintAnswers={hintAnswers}
+          activeStrings={config.strings}
         />
       </div>
     </section>
@@ -57,13 +60,15 @@ function PracticeSession({ mode, onBack }: PracticeSessionProps) {
 function App() {
   const [practiceMode, setPracticeMode] = useState<PracticeMode>(null);
   const [selectedModeForConfig, setSelectedModeForConfig] = useState<PracticeMode>(null);
+  const [activeConfig, setActiveConfig] = useState<GameConfig | null>(null);
 
   const handleSelectMode = (mode: Exclude<PracticeMode, null>) => {
     setSelectedModeForConfig(mode);
   };
 
-  const handleConfigStart = (_config: GameConfig) => {
+  const handleConfigStart = (config: GameConfig) => {
     if (selectedModeForConfig) {
+      setActiveConfig(config);
       enterPractice(selectedModeForConfig);
       setSelectedModeForConfig(null);
     }
@@ -80,6 +85,7 @@ function App() {
   const backToLobby = () => {
     setPracticeMode(null);
     setSelectedModeForConfig(null);
+    setActiveConfig(null);
   };
 
   return (
@@ -95,9 +101,9 @@ function App() {
           ) : (
             <Lobby onSelectMode={handleSelectMode} />
           )
-        ) : (
-          <PracticeSession mode={practiceMode} onBack={backToLobby} />
-        )}
+        ) : activeConfig ? (
+          <PracticeSession mode={practiceMode} config={activeConfig} onBack={backToLobby} />
+        ) : null}
       </main>
     </div>
   );

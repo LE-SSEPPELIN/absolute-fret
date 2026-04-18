@@ -6,7 +6,7 @@ type LobbyProps = {
 
 function Lobby({ onSelectMode }: LobbyProps) {
   const modeTitle = useMemo(() => {
-    return "吉他指板绝对音感与音程特训";
+    return "吉他指板绝对音感与音程练习";
   }, []);
 
   return (
@@ -22,14 +22,14 @@ function Lobby({ onSelectMode }: LobbyProps) {
           className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 border border-zinc-600 py-4 text-lg font-medium transition"
           onClick={() => onSelectMode("circle")}
         >
-          四 / 五度圈特训
+          四 / 五度圈练习
         </button>
         <button
           type="button"
           className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 border border-zinc-600 py-4 text-lg font-medium transition"
           onClick={() => onSelectMode("interval")}
         >
-          音程特训
+          音程练习
         </button>
       </div>
     </section>
