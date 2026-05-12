@@ -1,11 +1,12 @@
-import { useMemo, useState } from "react";
+﻿import { useMemo, useState } from "react";
 import Fretboard from "./components/fretboard/Fretboard";
 import QuestionDisplay from "./components/ui/QuestionDisplay";
 import Lobby from "./components/ui/Lobby";
 import ConfigPanel from "./components/ui/ConfigPanel";
+import { FRET_RANGE_OPTIONS } from "./utils/constants";
 import { useGameLogic, type PracticeMode as GamePracticeMode, type GameConfig } from "./hooks/useGameLogic";
 
-type PracticeMode = "circle" | "interval" | null;
+type PracticeMode = "circle" | "interval" | "randomNote" | "arpeggio" | null;
 
 type PracticeSessionProps = {
   mode: GamePracticeMode;
@@ -13,15 +14,30 @@ type PracticeSessionProps = {
   onBack: () => void;
 };
 
+const MODE_LABELS: Record<GamePracticeMode, string> = {
+  circle: "四/五度圈",
+  interval: "音程练习",
+  randomNote: "随机音寻找",
+  arpeggio: "琶音练习",
+};
+
+function buildFretRangeDescription(selectedRangeIds: string[]): string {
+  const orderedRanges = FRET_RANGE_OPTIONS.filter((item) => selectedRangeIds.includes(item.id));
+  if (orderedRanges.length === 0 || orderedRanges.length === FRET_RANGE_OPTIONS.length) {
+    return "全指板";
+  }
+  return orderedRanges.map((item) => item.shortLabel).join(", ");
+}
+
 function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
-  const { score, combo, isTransitioning, questionText, questionFeedback, activeFeedbackCell, hintAnswers, handleFretClick } =
+  const { score, combo, isTransitioning, questionText, questionFeedback, activeFeedbackCell, hintAnswers, lockedCorrectAnswers, handleFretClick } =
     useGameLogic(mode, config);
 
-  const modeTitle = useMemo(() => {
-    if (mode === "interval") return "音程练习";
-    if (config.subOptions.includes("P5")) return "五度圈练习";
-    return "四度圈练习";
-  }, [config.subOptions, mode]);
+  const subtitle = useMemo(() => {
+    const modeLabel = MODE_LABELS[mode];
+    const fretRangeText = buildFretRangeDescription(config.fretRanges);
+    return `${modeLabel} - ${fretRangeText}`;
+  }, [config.fretRanges, mode]);
 
   return (
     <section className="w-full flex flex-col gap-y-8 md:gap-y-16">
@@ -40,7 +56,7 @@ function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
         </div>
 
         <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 select-none">
-          <QuestionDisplay key={questionText} questionText={questionText} modeTitle={modeTitle} feedback={questionFeedback} />
+          <QuestionDisplay key={questionText} questionText={questionText} modeTitle={subtitle} feedback={questionFeedback} />
         </div>
       </header>
 
@@ -50,6 +66,7 @@ function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
           isTransitioning={isTransitioning}
           activeFeedbackCell={activeFeedbackCell}
           hintAnswers={hintAnswers}
+          lockedCorrectAnswers={lockedCorrectAnswers}
           activeStrings={config.strings}
         />
       </div>
@@ -93,11 +110,7 @@ function App() {
       <main className="w-full max-w-6xl flex flex-col gap-y-8 md:gap-y-16">
         {practiceMode === null ? (
           selectedModeForConfig ? (
-            <ConfigPanel
-              mode={selectedModeForConfig}
-              onStart={handleConfigStart}
-              onCancel={handleConfigCancel}
-            />
+            <ConfigPanel mode={selectedModeForConfig} onStart={handleConfigStart} onCancel={handleConfigCancel} />
           ) : (
             <Lobby onSelectMode={handleSelectMode} />
           )

@@ -1,16 +1,16 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 
 type LobbyProps = {
-  onSelectMode: (mode: "circle" | "interval") => void;
+  onSelectMode: (mode: "circle" | "interval" | "randomNote" | "arpeggio") => void;
 };
 
 function Lobby({ onSelectMode }: LobbyProps) {
   const modeTitle = useMemo(() => {
-    return "吉他指板绝对音感与音程练习";
+    return "吉他指板绝对音感、音程与和声音训练";
   }, []);
 
   return (
-    <section className="w-full flex flex-col items-center justify-center min-h-screen gap-y-12">
+    <section className="relative w-full flex flex-col items-center justify-center min-h-screen gap-y-12">
       <div className="text-center space-y-4">
         <h1 className="text-6xl font-bold tracking-widest">Absolute Fret</h1>
         <p className="text-zinc-400 text-lg">{modeTitle}</p>
@@ -31,7 +31,22 @@ function Lobby({ onSelectMode }: LobbyProps) {
         >
           音程练习
         </button>
+        <button
+          type="button"
+          className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 border border-zinc-600 py-4 text-lg font-medium transition"
+          onClick={() => onSelectMode("randomNote")}
+        >
+          随机音寻找
+        </button>
+        <button
+          type="button"
+          className="w-full rounded-xl bg-zinc-800 hover:bg-zinc-700 active:bg-zinc-600 border border-zinc-600 py-4 text-lg font-medium transition"
+          onClick={() => onSelectMode("arpeggio")}
+        >
+          琶音/和弦音
+        </button>
       </div>
+      <p className="absolute bottom-10 text-zinc-500 text-lg">特别鸣谢：夏西来</p>
     </section>
   );
 }

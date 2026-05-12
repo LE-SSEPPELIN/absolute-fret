@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+﻿import { useCallback, useEffect, useRef, useState } from "react";
 import { useAudio } from "./useAudio";
-import { currentTuning, CHROMATIC_SCALE } from "../utils/constants";
+import { CHORD_FORMULAS, CHROMATIC_SCALE, FRET_RANGE_OPTIONS, currentTuning } from "../utils/constants";
 import { getNoteAtFret } from "../utils/musicTheory";
 
-export type PracticeMode = "circle" | "interval";
+export type PracticeMode = "circle" | "interval" | "randomNote" | "arpeggio";
 export type QuestionFeedback = "idle" | "correct" | "wrong";
 
 export type BoardPosition = {
@@ -13,6 +13,7 @@ export type BoardPosition = {
 
 export type GameConfig = {
   strings: number[];
+  fretRanges: string[];
   modeLength: number | "endless";
   subOptions: string[];
 };
@@ -23,16 +24,21 @@ type IntervalOption = {
   semitones: number;
 };
 
+type CompletionMode = "anyOne" | "allRequired";
+
 type QuestionPayload = {
   targetNote: string;
   questionText: string;
   validAnswers: BoardPosition[];
+  completionMode: CompletionMode;
 };
 
 const FRET_COUNT = 14;
 const ALL_STRINGS = [0, 1, 2, 3, 4, 5];
+const ALL_FRET_RANGE_IDS = FRET_RANGE_OPTIONS.map((item) => item.id);
 const DEFAULT_GAME_CONFIG: GameConfig = {
   strings: ALL_STRINGS,
+  fretRanges: ALL_FRET_RANGE_IDS,
   modeLength: 20,
   subOptions: [],
 };
@@ -51,31 +57,64 @@ const INTERVAL_OPTIONS: IntervalOption[] = [
   { id: "M7", name: "大七度", semitones: 11 },
   { id: "P8", name: "纯八度", semitones: 12 },
 ];
+
 type ChromaticNote = (typeof CHROMATIC_SCALE)[number];
 
 function randomIndex(maxExclusive: number): number {
   return Math.floor(Math.random() * maxExclusive);
 }
 
+function toPositionKey(pos: BoardPosition): string {
+  return `${pos.stringIndex}-${pos.fretIndex}`;
+}
+
 function getActiveStrings(config: GameConfig): number[] {
-  const normalized = config.strings
+  const normalized = Array.from(new Set(config.strings))
     .filter((stringIndex) => stringIndex >= 0 && stringIndex < currentTuning.length)
     .sort((a, b) => a - b);
 
-  if (normalized.length > 0) {
-    return normalized;
-  }
-
+  if (normalized.length > 0) return normalized;
   return ALL_STRINGS;
 }
 
-function buildValidAnswers(targetNote: string, activeStrings: number[]): BoardPosition[] {
+function getAllowedFrets(config: GameConfig, mode: PracticeMode): Set<number> {
+  if (mode !== "arpeggio") {
+    const allFrets = new Set<number>();
+    for (let fret = 0; fret < FRET_COUNT; fret += 1) {
+      allFrets.add(fret);
+    }
+    return allFrets;
+  }
+
+  const selectedRanges = FRET_RANGE_OPTIONS.filter((item) => config.fretRanges.includes(item.id));
+  const ranges = selectedRanges.length > 0 ? selectedRanges : FRET_RANGE_OPTIONS;
+  const allowedFrets = new Set<number>();
+
+  for (const range of ranges) {
+    let start: number = range.minFret;
+    if (range.id === "low_3_7") start = 4;
+    if (range.id === "mid_7_10") start = 8;
+    if (range.id === "high_10_13") start = 11;
+
+    for (let fret = start; fret <= range.maxFret; fret += 1) {
+      if (fret >= 0 && fret < FRET_COUNT) {
+        allowedFrets.add(fret);
+      }
+    }
+  }
+
+  return allowedFrets;
+}
+
+function buildValidAnswers(targetNotes: string[], activeStrings: number[], allowedFrets: Set<number>): BoardPosition[] {
+  const targetSet = new Set(targetNotes);
   const positions: BoardPosition[] = [];
 
   for (const stringIndex of activeStrings) {
     for (let fretIndex = 0; fretIndex < FRET_COUNT; fretIndex += 1) {
+      if (!allowedFrets.has(fretIndex)) continue;
       const note = getNoteAtFret(stringIndex, fretIndex).note;
-      if (note === targetNote) {
+      if (targetSet.has(note)) {
         positions.push({ stringIndex, fretIndex });
       }
     }
@@ -86,23 +125,27 @@ function buildValidAnswers(targetNote: string, activeStrings: number[]): BoardPo
 
 function buildCircleQuestion(index: number, config: GameConfig): QuestionPayload {
   const activeStrings = getActiveStrings(config);
+  const allowedFrets = getAllowedFrets(config, "circle");
   const circlePool = config.subOptions.includes("P5") ? CIRCLE_OF_FIFTHS : CIRCLE_OF_FOURTHS;
   const targetNote = circlePool[index % circlePool.length];
 
   return {
     targetNote,
     questionText: targetNote,
-    validAnswers: buildValidAnswers(targetNote, activeStrings),
+    validAnswers: buildValidAnswers([targetNote], activeStrings, allowedFrets),
+    completionMode: "anyOne",
   };
 }
 
 function buildIntervalQuestion(config: GameConfig): QuestionPayload {
   const activeStrings = getActiveStrings(config);
+  const allowedFrets = getAllowedFrets(config, "interval");
   const selectedIntervals = INTERVAL_OPTIONS.filter((option) => config.subOptions.includes(option.id));
   const availableIntervals = selectedIntervals.length > 0 ? selectedIntervals : INTERVAL_OPTIONS;
 
   const rootString = activeStrings[randomIndex(activeStrings.length)]!;
-  const rootFret = randomIndex(FRET_COUNT);
+  const allowedFretValues = Array.from(allowedFrets);
+  const rootFret = allowedFretValues[randomIndex(allowedFretValues.length)]!;
   const rootInfo = getNoteAtFret(rootString, rootFret);
   const interval = availableIntervals[randomIndex(availableIntervals.length)]!;
   const rootIndex = CHROMATIC_SCALE.indexOf(rootInfo.note as ChromaticNote);
@@ -110,15 +153,112 @@ function buildIntervalQuestion(config: GameConfig): QuestionPayload {
 
   return {
     targetNote,
-    questionText: `${currentTuning[rootString]!.note}弦 - ${rootInfo.note} + ${interval.name}`,
-    validAnswers: buildValidAnswers(targetNote, activeStrings),
+    questionText: `${currentTuning[rootString]!.note} 弦 - ${rootInfo.note} + ${interval.name}`,
+    validAnswers: buildValidAnswers([targetNote], activeStrings, allowedFrets),
+    completionMode: "anyOne",
+  };
+}
+
+function buildRandomNoteQuestion(config: GameConfig): QuestionPayload {
+  const activeStrings = getActiveStrings(config);
+  const allowedFrets = getAllowedFrets(config, "randomNote");
+  const selectedNotes = CHROMATIC_SCALE.filter((note) => config.subOptions.includes(note));
+  const notePool = selectedNotes.length > 0 ? selectedNotes : [...CHROMATIC_SCALE];
+  const isAllStringsMode = activeStrings.length === ALL_STRINGS.length;
+
+  if (isAllStringsMode) {
+    const targetNote = notePool[randomIndex(notePool.length)]!;
+    return {
+      targetNote,
+      questionText: targetNote,
+      validAnswers: buildValidAnswers([targetNote], activeStrings, allowedFrets),
+      completionMode: "allRequired",
+    };
+  }
+
+  const playableTargets: { stringIndex: number; note: string; answers: BoardPosition[] }[] = [];
+  for (const stringIndex of activeStrings) {
+    for (const note of notePool) {
+      const answers = buildValidAnswers([note], [stringIndex], allowedFrets);
+      if (answers.length > 0) {
+        playableTargets.push({ stringIndex, note, answers });
+      }
+    }
+  }
+
+  if (playableTargets.length === 0) {
+    const fallbackTargets: { stringIndex: number; note: string; answers: BoardPosition[] }[] = [];
+    for (const stringIndex of activeStrings) {
+      for (const note of CHROMATIC_SCALE) {
+        const answers = buildValidAnswers([note], [stringIndex], allowedFrets);
+        if (answers.length > 0) {
+          fallbackTargets.push({ stringIndex, note, answers });
+        }
+      }
+    }
+    const fallbackPicked = fallbackTargets[randomIndex(fallbackTargets.length)]!;
+    return {
+      targetNote: fallbackPicked.note,
+      questionText: `${currentTuning[fallbackPicked.stringIndex]!.note} 弦 - ${fallbackPicked.note}`,
+      validAnswers: fallbackPicked.answers,
+      completionMode: "anyOne",
+    };
+  }
+
+  const picked = playableTargets[randomIndex(playableTargets.length)]!;
+
+  return {
+    targetNote: picked.note,
+    questionText: `${currentTuning[picked.stringIndex]!.note} 弦 - ${picked.note}`,
+    validAnswers: picked.answers,
+    completionMode: "anyOne",
+  };
+}
+
+function buildArpeggioQuestion(config: GameConfig): QuestionPayload {
+  const activeStrings = getActiveStrings(config);
+  const allowedFrets = getAllowedFrets(config, "arpeggio");
+  const selectedChordFormulas = CHORD_FORMULAS.filter((formula) => config.subOptions.includes(formula.id));
+  const chordPool = selectedChordFormulas.length > 0 ? selectedChordFormulas : CHORD_FORMULAS;
+  for (let attempts = 0; attempts < 36; attempts += 1) {
+    const rootNote = CHROMATIC_SCALE[randomIndex(CHROMATIC_SCALE.length)]!;
+    const selectedChord = chordPool[randomIndex(chordPool.length)]!;
+    const rootIndex = CHROMATIC_SCALE.indexOf(rootNote as ChromaticNote);
+    const chordNotes = selectedChord.semitones.map((step) => CHROMATIC_SCALE[(rootIndex + step) % CHROMATIC_SCALE.length]!);
+    const validAnswers = buildValidAnswers(chordNotes, activeStrings, allowedFrets);
+    if (validAnswers.length > 0) {
+      return {
+        targetNote: rootNote,
+        questionText: `${rootNote}${selectedChord.name}`,
+        validAnswers,
+        completionMode: "allRequired",
+      };
+    }
+  }
+
+  const fallbackRoot = "C";
+  const fallbackChord = CHORD_FORMULAS[0]!;
+  const fallbackNotes = fallbackChord.semitones.map((step) => CHROMATIC_SCALE[(CHROMATIC_SCALE.indexOf(fallbackRoot) + step) % CHROMATIC_SCALE.length]!);
+  return {
+    targetNote: fallbackRoot,
+    questionText: `${fallbackRoot}${fallbackChord.name}`,
+    validAnswers: buildValidAnswers(fallbackNotes, activeStrings, allowedFrets),
+    completionMode: "allRequired",
   };
 }
 
 export function useGameLogic(mode: PracticeMode, config: GameConfig) {
   const { playNote } = useAudio();
   const normalizedConfig = config ?? DEFAULT_GAME_CONFIG;
-  const initialQuestion = mode === "circle" ? buildCircleQuestion(0, normalizedConfig) : buildIntervalQuestion(normalizedConfig);
+
+  const buildInitialQuestion = () => {
+    if (mode === "circle") return buildCircleQuestion(0, normalizedConfig);
+    if (mode === "interval") return buildIntervalQuestion(normalizedConfig);
+    if (mode === "randomNote") return buildRandomNoteQuestion(normalizedConfig);
+    return buildArpeggioQuestion(normalizedConfig);
+  };
+
+  const initialQuestion = buildInitialQuestion();
 
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
@@ -126,10 +266,9 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
   const [targetNote, setTargetNote] = useState(initialQuestion.targetNote);
   const [questionText, setQuestionText] = useState(initialQuestion.questionText);
   const [questionFeedback, setQuestionFeedback] = useState<QuestionFeedback>("idle");
-  const [activeFeedbackCell, setActiveFeedbackCell] = useState<(BoardPosition & { state: "correct" | "wrong" }) | null>(
-    null,
-  );
+  const [activeFeedbackCell, setActiveFeedbackCell] = useState<(BoardPosition & { state: "correct" | "wrong" }) | null>(null);
   const [hintAnswers, setHintAnswers] = useState<BoardPosition[]>([]);
+  const [lockedCorrectAnswers, setLockedCorrectAnswers] = useState<BoardPosition[]>([]);
 
   const circleIndexRef = useRef(mode === "circle" ? 1 : 0);
   const wrongCountRef = useRef(0);
@@ -154,6 +293,7 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
     setTargetNote(question.targetNote);
     setQuestionText(question.questionText);
     setHintAnswers([]);
+    setLockedCorrectAnswers([]);
     setQuestionFeedback("idle");
     setActiveFeedbackCell(null);
   }, []);
@@ -166,7 +306,17 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
       return;
     }
 
-    applyQuestion(buildIntervalQuestion(normalizedConfig));
+    if (mode === "interval") {
+      applyQuestion(buildIntervalQuestion(normalizedConfig));
+      return;
+    }
+
+    if (mode === "randomNote") {
+      applyQuestion(buildRandomNoteQuestion(normalizedConfig));
+      return;
+    }
+
+    applyQuestion(buildArpeggioQuestion(normalizedConfig));
   }, [applyQuestion, mode, normalizedConfig]);
 
   const handleFretClick = useCallback(
@@ -174,21 +324,48 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
       if (isTransitioning) return;
 
       const question = currentQuestionRef.current;
-      if (!question) {
-        return;
-      }
+      if (!question) return;
 
       const clicked = getNoteAtFret(stringIndex, fretIndex);
       await playNote(clicked.toneParam);
 
-      if (clicked.note === question.targetNote) {
+      const clickedKey = toPositionKey({ stringIndex, fretIndex });
+      const validKeySet = new Set(question.validAnswers.map(toPositionKey));
+      const isCorrectPosition = validKeySet.has(clickedKey);
+
+      if (isCorrectPosition) {
         clearTimers();
         wrongCountRef.current = 0;
-        setScore((prev) => prev + 1);
-        setCombo((prev) => prev + 1);
         setQuestionFeedback("correct");
         setActiveFeedbackCell({ stringIndex, fretIndex, state: "correct" });
         setHintAnswers([]);
+
+        if (question.completionMode === "allRequired") {
+          setLockedCorrectAnswers((prev) => {
+            const prevKeySet = new Set(prev.map(toPositionKey));
+            if (prevKeySet.has(clickedKey)) return prev;
+
+            const next = [...prev, { stringIndex, fretIndex }];
+            const nextKeySet = new Set(next.map(toPositionKey));
+            const allMatched = question.validAnswers.every((pos) => nextKeySet.has(toPositionKey(pos)));
+
+            if (allMatched) {
+              setScore((prevScore) => prevScore + 1);
+              setCombo((prevCombo) => prevCombo + 1);
+              setIsTransitioning(true);
+              transitionTimerRef.current = window.setTimeout(() => {
+                pushNextQuestion();
+                setIsTransitioning(false);
+              }, 400);
+            }
+
+            return next;
+          });
+          return;
+        }
+
+        setScore((prev) => prev + 1);
+        setCombo((prev) => prev + 1);
         setIsTransitioning(true);
 
         transitionTimerRef.current = window.setTimeout(() => {
@@ -232,6 +409,7 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
     questionFeedback,
     activeFeedbackCell,
     hintAnswers,
+    lockedCorrectAnswers,
     handleFretClick,
   };
 }

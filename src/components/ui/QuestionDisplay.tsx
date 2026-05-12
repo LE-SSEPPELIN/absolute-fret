@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import type { QuestionFeedback } from "../../hooks/useGameLogic";
 
 type QuestionDisplayProps = {
@@ -30,7 +30,7 @@ function QuestionDisplay({ questionText, modeTitle, feedback }: QuestionDisplayP
       >
         {questionText}
       </h2>
-      <p className="text-center text-xs text-zinc-500 mt-2">{modeTitle}</p>
+      <p className="text-center text-base font-medium text-zinc-400 mt-2">{modeTitle}</p>
     </div>
   );
 }

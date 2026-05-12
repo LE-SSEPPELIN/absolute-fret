@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+﻿import { useMemo } from "react";
 import Fret from "./Fret";
 import StringLine from "./String";
 import { FRET_WIDTH_RATIOS } from "../../utils/constants";
@@ -9,13 +9,22 @@ type FretboardProps = {
   isTransitioning: boolean;
   activeFeedbackCell: (BoardPosition & { state: "correct" | "wrong" }) | null;
   hintAnswers: BoardPosition[];
+  lockedCorrectAnswers: BoardPosition[];
   activeStrings: number[];
 };
 
-function Fretboard({ onFretClick, isTransitioning, activeFeedbackCell, hintAnswers, activeStrings }: FretboardProps) {
-  const hintKeySet = useMemo(
-    () => new Set(hintAnswers.map((pos) => `${pos.stringIndex}-${pos.fretIndex}`)),
-    [hintAnswers],
+function Fretboard({
+  onFretClick,
+  isTransitioning,
+  activeFeedbackCell,
+  hintAnswers,
+  lockedCorrectAnswers,
+  activeStrings,
+}: FretboardProps) {
+  const hintKeySet = useMemo(() => new Set(hintAnswers.map((pos) => `${pos.stringIndex}-${pos.fretIndex}`)), [hintAnswers]);
+  const lockedCorrectKeySet = useMemo(
+    () => new Set(lockedCorrectAnswers.map((pos) => `${pos.stringIndex}-${pos.fretIndex}`)),
+    [lockedCorrectAnswers],
   );
 
   return (
@@ -30,6 +39,7 @@ function Fretboard({ onFretClick, isTransitioning, activeFeedbackCell, hintAnswe
             isTransitioning={isTransitioning}
             activeFeedbackCell={activeFeedbackCell}
             hintKeySet={hintKeySet}
+            lockedCorrectKeySet={lockedCorrectKeySet}
             activeStrings={activeStrings}
           />
         ))}
