@@ -2,6 +2,38 @@
 
 export const CHROMATIC_SCALE = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"] as const;
 
+export const IDENTIFY_NOTE_LABELS = ["C", "♯C/♭D", "D", "♯D/♭E", "E", "F", "♯F/♭G", "G", "♯G/♭A", "A", "♯A/♭B", "B"] as const;
+
+export const IDENTIFY_NOTE_TO_PITCH: Record<(typeof IDENTIFY_NOTE_LABELS)[number], (typeof CHROMATIC_SCALE)[number]> = {
+  C: "C",
+  "♯C/♭D": "C#",
+  D: "D",
+  "♯D/♭E": "D#",
+  E: "E",
+  F: "F",
+  "♯F/♭G": "F#",
+  G: "G",
+  "♯G/♭A": "G#",
+  A: "A",
+  "♯A/♭B": "A#",
+  B: "B",
+};
+
+export const PITCH_TO_IDENTIFY_NOTE: Record<(typeof CHROMATIC_SCALE)[number], (typeof IDENTIFY_NOTE_LABELS)[number]> = {
+  C: "C",
+  "C#": "♯C/♭D",
+  D: "D",
+  "D#": "♯D/♭E",
+  E: "E",
+  F: "F",
+  "F#": "♯F/♭G",
+  G: "G",
+  "G#": "♯G/♭A",
+  A: "A",
+  "A#": "♯A/♭B",
+  B: "B",
+};
+
 export const currentTuning = [
   { note: "E", octave: 4 },
   { note: "B", octave: 3 },

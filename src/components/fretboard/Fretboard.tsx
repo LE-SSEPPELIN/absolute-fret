@@ -10,6 +10,7 @@ type FretboardProps = {
   activeFeedbackCell: (BoardPosition & { state: "correct" | "wrong" }) | null;
   hintAnswers: BoardPosition[];
   lockedCorrectAnswers: BoardPosition[];
+  highlightedFret?: BoardPosition | null;
   activeStrings: number[];
 };
 
@@ -19,6 +20,7 @@ function Fretboard({
   activeFeedbackCell,
   hintAnswers,
   lockedCorrectAnswers,
+  highlightedFret,
   activeStrings,
 }: FretboardProps) {
   const hintKeySet = useMemo(() => new Set(hintAnswers.map((pos) => `${pos.stringIndex}-${pos.fretIndex}`)), [hintAnswers]);
@@ -26,6 +28,10 @@ function Fretboard({
     () => new Set(lockedCorrectAnswers.map((pos) => `${pos.stringIndex}-${pos.fretIndex}`)),
     [lockedCorrectAnswers],
   );
+  const highlightedKeySet = useMemo(() => {
+    if (!highlightedFret) return new Set<string>();
+    return new Set([`${highlightedFret.stringIndex}-${highlightedFret.fretIndex}`]);
+  }, [highlightedFret]);
 
   return (
     <div className="relative w-full h-full rounded-lg overflow-hidden border border-zinc-700/80 bg-[#3E2723]">
@@ -40,6 +46,7 @@ function Fretboard({
             activeFeedbackCell={activeFeedbackCell}
             hintKeySet={hintKeySet}
             lockedCorrectKeySet={lockedCorrectKeySet}
+            highlightedKeySet={highlightedKeySet}
             activeStrings={activeStrings}
           />
         ))}

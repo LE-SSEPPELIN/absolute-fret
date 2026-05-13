@@ -1,9 +1,9 @@
 ﻿import { useMemo, useState } from "react";
-import { CHORD_FORMULAS, CHROMATIC_SCALE, FRET_RANGE_OPTIONS } from "../../utils/constants";
+import { CHORD_FORMULAS, CHROMATIC_SCALE, FRET_RANGE_OPTIONS, IDENTIFY_NOTE_LABELS } from "../../utils/constants";
 import type { GameConfig } from "../../hooks/useGameLogic";
 
 type ConfigPanelProps = {
-  mode: "circle" | "interval" | "randomNote" | "arpeggio";
+  mode: "circle" | "interval" | "randomNote" | "arpeggio" | "identifyByPosition" | "listenAndLocate";
   onStart: (config: GameConfig) => void;
   onCancel: () => void;
 };
@@ -45,6 +45,7 @@ function getInitialSubOptions(mode: ConfigPanelProps["mode"]): string[] {
   if (mode === "circle") return ["P4"];
   if (mode === "randomNote") return [...CHROMATIC_SCALE];
   if (mode === "arpeggio") return CHORD_FORMULAS.map((item) => item.id);
+  if (mode === "identifyByPosition" || mode === "listenAndLocate") return [...IDENTIFY_NOTE_LABELS];
   return [];
 }
 
@@ -53,6 +54,7 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
   const [selectedFretRanges, setSelectedFretRanges] = useState<string[]>([...ALL_FRET_RANGES]);
   const [modeLength, setModeLength] = useState<number | "endless">(20);
   const [selectedSubOptions, setSelectedSubOptions] = useState<string[]>(getInitialSubOptions(mode));
+  const [listenModeType, setListenModeType] = useState<"hardcoreAll" | "pickOne">("hardcoreAll");
 
   const toggleString = (stringIndex: number) => {
     setSelectedStrings((prev) => (prev.includes(stringIndex) ? prev.filter((s) => s !== stringIndex) : [...prev, stringIndex]));
@@ -70,7 +72,7 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
   };
 
   const handleStart = () => {
-    onStart({ strings: selectedStrings, fretRanges: selectedFretRanges, modeLength, subOptions: selectedSubOptions });
+    onStart({ strings: selectedStrings, fretRanges: selectedFretRanges, modeLength, subOptions: selectedSubOptions, listenModeType });
   };
 
   const isValid = selectedStrings.length > 0 && selectedSubOptions.length > 0 && (mode !== "arpeggio" || selectedFretRanges.length > 0);
@@ -79,51 +81,55 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
     if (mode === "circle") return "练习模式";
     if (mode === "interval") return "选择音程";
     if (mode === "randomNote") return "目标音符池";
+    if (mode === "identifyByPosition" || mode === "listenAndLocate") return "目标音符池";
     return "和弦类型";
   }, [mode]);
 
   const isAllStringsSelected = selectedStrings.length === ALL_STRINGS.length;
-  const isRightAllSelected =
+  const rightAllCount =
     mode === "interval"
-      ? selectedSubOptions.length === INTERVAL_OPTIONS.length
+      ? INTERVAL_OPTIONS.length
       : mode === "randomNote"
-        ? selectedSubOptions.length === CHROMATIC_SCALE.length
-        : mode === "arpeggio"
-          ? selectedSubOptions.length === ARPEGGIO_OPTIONS.length
-          : false;
+        ? CHROMATIC_SCALE.length
+        : mode === "identifyByPosition" || mode === "listenAndLocate"
+          ? IDENTIFY_NOTE_LABELS.length
+          : ARPEGGIO_OPTIONS.length;
+  const isRightAllSelected = selectedSubOptions.length === rightAllCount;
   const isAllRangesSelected = selectedFretRanges.length === ALL_FRET_RANGES.length;
 
   return (
     <section className="w-full max-w-4xl mx-auto rounded-2xl bg-zinc-900 border border-zinc-700 p-6 shadow-2xl">
       <div className="flex flex-col md:flex-row gap-8">
         <div className="flex-1 space-y-6">
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-zinc-300">练习长度</label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => setModeLength(20)}
-                className={`py-3 rounded-lg border transition ${
-                  modeLength === 20
-                    ? "bg-zinc-700 border-zinc-500 text-white"
-                    : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                }`}
-              >
-                20 题
-              </button>
-              <button
-                type="button"
-                onClick={() => setModeLength("endless")}
-                className={`py-3 rounded-lg border transition ${
-                  modeLength === "endless"
-                    ? "bg-zinc-700 border-zinc-500 text-white"
-                    : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                }`}
-              >
-                无尽
-              </button>
+          {mode !== "identifyByPosition" && mode !== "listenAndLocate" ? (
+            <div className="space-y-3">
+              <label className="text-sm font-medium text-zinc-300">练习长度</label>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setModeLength(20)}
+                  className={`py-3 rounded-lg border transition ${
+                    modeLength === 20
+                      ? "bg-zinc-700 border-zinc-500 text-white"
+                      : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                  }`}
+                >
+                  20 题
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModeLength("endless")}
+                  className={`py-3 rounded-lg border transition ${
+                    modeLength === "endless"
+                      ? "bg-zinc-700 border-zinc-500 text-white"
+                      : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                  }`}
+                >
+                  无尽
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
 
           <div className="space-y-3">
             <label className="text-sm font-medium text-zinc-300">练习弦数</label>
@@ -215,12 +221,14 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
               </div>
             ) : (
               <>
-                <div className={`grid gap-3 ${mode === "randomNote" ? "grid-cols-4" : "grid-cols-2"}`}>
+                <div className={`grid gap-3 ${mode === "randomNote" || mode === "identifyByPosition" || mode === "listenAndLocate" ? "grid-cols-4" : "grid-cols-2"}`}>
                   {(mode === "interval"
                     ? INTERVAL_OPTIONS
                     : mode === "randomNote"
                       ? CHROMATIC_SCALE.map((note) => ({ id: note, label: note }))
-                      : ARPEGGIO_OPTIONS
+                      : mode === "identifyByPosition" || mode === "listenAndLocate"
+                        ? IDENTIFY_NOTE_LABELS.map((note) => ({ id: note, label: note }))
+                        : ARPEGGIO_OPTIONS
                   ).map((opt) => {
                     const isSelected = selectedSubOptions.includes(opt.id);
                     return (
@@ -242,18 +250,46 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
                 <button
                   type="button"
                   onClick={() => {
-                    if (mode === "interval") {
-                      setSelectedSubOptions(isRightAllSelected ? [] : INTERVAL_OPTIONS.map((opt) => opt.id));
-                    } else if (mode === "randomNote") {
-                      setSelectedSubOptions(isRightAllSelected ? [] : [...CHROMATIC_SCALE]);
-                    } else if (mode === "arpeggio") {
-                      setSelectedSubOptions(isRightAllSelected ? [] : ARPEGGIO_OPTIONS.map((opt) => opt.id));
+                    if (mode === "interval") setSelectedSubOptions(isRightAllSelected ? [] : INTERVAL_OPTIONS.map((opt) => opt.id));
+                    if (mode === "randomNote") setSelectedSubOptions(isRightAllSelected ? [] : [...CHROMATIC_SCALE]);
+                    if (mode === "identifyByPosition" || mode === "listenAndLocate") {
+                      setSelectedSubOptions(isRightAllSelected ? [] : [...IDENTIFY_NOTE_LABELS]);
                     }
+                    if (mode === "arpeggio") setSelectedSubOptions(isRightAllSelected ? [] : ARPEGGIO_OPTIONS.map((opt) => opt.id));
                   }}
                   className="w-full text-center text-sm text-zinc-400 hover:text-zinc-200 mt-2 cursor-pointer transition-colors"
                 >
                   {isRightAllSelected ? "取消全选" : "全选"}
                 </button>
+                {mode === "listenAndLocate" ? (
+                  <div className="pt-2 space-y-3">
+                    <label className="text-sm font-medium text-zinc-300">过关模式</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setListenModeType("hardcoreAll")}
+                        className={`py-3 rounded-lg border transition ${
+                          listenModeType === "hardcoreAll"
+                            ? "bg-zinc-700 border-zinc-500 text-white"
+                            : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        }`}
+                      >
+                        硬核全找
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setListenModeType("pickOne")}
+                        className={`py-3 rounded-lg border transition ${
+                          listenModeType === "pickOne"
+                            ? "bg-zinc-700 border-zinc-500 text-white"
+                            : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                        }`}
+                      >
+                        任选其一
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
               </>
             )}
           </div>

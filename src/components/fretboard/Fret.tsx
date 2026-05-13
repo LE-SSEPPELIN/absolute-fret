@@ -10,6 +10,7 @@ type FretProps = {
   activeFeedbackCell: { stringIndex: number; fretIndex: number; state: "correct" | "wrong" } | null;
   hintKeySet: Set<string>;
   lockedCorrectKeySet: Set<string>;
+  highlightedKeySet: Set<string>;
   activeStrings: number[];
 };
 
@@ -23,6 +24,7 @@ function Fret({
   activeFeedbackCell,
   hintKeySet,
   lockedCorrectKeySet,
+  highlightedKeySet,
   activeStrings,
 }: FretProps) {
   const hasMarker = MARKER_FRETS.includes(fretIndex);
@@ -46,7 +48,9 @@ function Fret({
               ? "correct"
               : hintKeySet.has(cellKey)
                 ? "hint"
-                : "idle";
+                : highlightedKeySet.has(cellKey)
+                  ? "highlight"
+                  : "idle";
 
           const glowClass =
             glowState === "correct"
@@ -55,7 +59,9 @@ function Fret({
                 ? "bg-red-500/40 shadow-[0_0_20px_rgba(239,68,68,0.8)]"
                 : glowState === "hint"
                   ? "bg-yellow-400/20 shadow-[0_0_15px_rgba(250,204,21,0.5)] animate-pulse"
-                  : "bg-white/20 shadow-[0_0_20px_rgba(255,255,255,0.7)]";
+                  : glowState === "highlight"
+                    ? "bg-sky-400/35 shadow-[0_0_16px_rgba(56,189,248,0.75)]"
+                    : "bg-white/20 shadow-[0_0_20px_rgba(255,255,255,0.7)]";
 
           return (
             <div key={`${stringIndex}-${fretIndex}`} className="relative w-full h-8">
@@ -64,9 +70,7 @@ function Fret({
                 className={`absolute inset-0 w-full h-full bg-transparent ${isStringActive ? "cursor-pointer" : "cursor-default"}`}
                 disabled={isTransitioning || !isStringActive}
                 onClick={() => {
-                  if (!isStringActive) {
-                    return;
-                  }
+                  if (!isStringActive) return;
                   onFretClick(stringIndex, fretIndex);
                 }}
                 aria-label={`${stringIndex + 1}弦 ${fretIndex}品`}
