@@ -101,35 +101,33 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
     <section className="w-full max-w-4xl mx-auto rounded-2xl bg-zinc-900 border border-zinc-700 p-6 shadow-2xl">
       <div className="flex flex-col md:flex-row gap-8">
         <div className="flex-1 space-y-6">
-          {mode !== "identifyByPosition" && mode !== "listenAndLocate" ? (
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-zinc-300">练习长度</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setModeLength(20)}
-                  className={`py-3 rounded-lg border transition ${
-                    modeLength === 20
-                      ? "bg-zinc-700 border-zinc-500 text-white"
-                      : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                  }`}
-                >
-                  20 题
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setModeLength("endless")}
-                  className={`py-3 rounded-lg border transition ${
-                    modeLength === "endless"
-                      ? "bg-zinc-700 border-zinc-500 text-white"
-                      : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
-                  }`}
-                >
-                  无尽
-                </button>
-              </div>
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-zinc-300">练习长度</label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setModeLength(20)}
+                className={`py-3 rounded-lg border transition ${
+                  modeLength === 20
+                    ? "bg-zinc-700 border-zinc-500 text-white"
+                    : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                }`}
+              >
+                20 题
+              </button>
+              <button
+                type="button"
+                onClick={() => setModeLength("endless")}
+                className={`py-3 rounded-lg border transition ${
+                  modeLength === "endless"
+                    ? "bg-zinc-700 border-zinc-500 text-white"
+                    : "bg-zinc-800 border-zinc-700 text-zinc-400 hover:bg-zinc-700"
+                }`}
+              >
+                无尽
+              </button>
             </div>
-          ) : null}
+          </div>
 
           <div className="space-y-3">
             <label className="text-sm font-medium text-zinc-300">练习弦数</label>

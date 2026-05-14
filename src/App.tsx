@@ -4,6 +4,7 @@ import QuestionDisplay from "./components/ui/QuestionDisplay";
 import Lobby from "./components/ui/Lobby";
 import ConfigPanel from "./components/ui/ConfigPanel";
 import NoteKeyboard from "./components/ui/NoteKeyboard";
+import ResultModal from "./components/ui/ResultModal";
 import { FRET_RANGE_OPTIONS } from "./utils/constants";
 import { useGameLogic, type PracticeMode as GamePracticeMode, type GameConfig } from "./hooks/useGameLogic";
 
@@ -44,9 +45,14 @@ function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
     noteKeyFeedback,
     noteHintLabel,
     identifyWrongCount,
+    gameState,
+    totalErrors,
+    durationSeconds,
+    accuracy,
     handleFretClick,
     handleNoteKeyClick,
     replayCurrentQuestionAudio,
+    restartGame,
   } = useGameLogic(mode, config);
 
   const subtitle = useMemo(() => {
@@ -59,6 +65,7 @@ function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
 
   if (mode === "identifyByPosition") {
     return (
+      <>
       <section className="w-full h-[calc(100vh-4rem)] max-h-full flex flex-col items-center justify-center gap-6 overflow-hidden">
         <header className="relative w-full flex items-center justify-between">
           <button
@@ -104,10 +111,21 @@ function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
           <NoteKeyboard onKeyClick={handleNoteKeyClick} keyFeedback={noteKeyFeedback} hintLabel={noteHintLabel} wrongCount={identifyWrongCount} />
         </div>
       </section>
+      {gameState === "finished" ? (
+        <ResultModal
+          totalErrors={totalErrors}
+          accuracy={accuracy}
+          durationSeconds={durationSeconds}
+          onBack={onBack}
+          onContinue={restartGame}
+        />
+      ) : null}
+      </>
     );
   }
 
   return (
+    <>
     <section className="w-full h-[calc(100vh-4rem)] max-h-full flex flex-col items-center justify-center gap-6 overflow-hidden">
       <header className="relative w-full flex items-center justify-between">
         <button
@@ -149,6 +167,16 @@ function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
         </div>
       </div>
     </section>
+    {gameState === "finished" ? (
+      <ResultModal
+        totalErrors={totalErrors}
+        accuracy={accuracy}
+        durationSeconds={durationSeconds}
+        onBack={onBack}
+        onContinue={restartGame}
+      />
+    ) : null}
+    </>
   );
 }
 

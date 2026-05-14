@@ -14,6 +14,7 @@ import { getNoteAtFret } from "../utils/musicTheory";
 export type PracticeMode = "circle" | "interval" | "randomNote" | "arpeggio" | "identifyByPosition" | "listenAndLocate";
 export type QuestionFeedback = "idle" | "correct" | "wrong";
 export type NoteKeyFeedbackState = "idle" | "correct" | "wrong";
+export type GameState = "idle" | "playing" | "finished";
 
 export type BoardPosition = {
   stringIndex: number;
@@ -324,6 +325,10 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
   const [score, setScore] = useState(0);
   const [combo, setCombo] = useState(0);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [gameState, setGameState] = useState<GameState>("idle");
+  const [startTime, setStartTime] = useState<number>(Date.now());
+  const [finishedTime, setFinishedTime] = useState<number | null>(null);
+  const [totalErrors, setTotalErrors] = useState(0);
   const [questionText, setQuestionText] = useState(initialQuestion.questionText);
   const [questionFeedback, setQuestionFeedback] = useState<QuestionFeedback>("idle");
   const [activeFeedbackCell, setActiveFeedbackCell] = useState<(BoardPosition & { state: "correct" | "wrong" }) | null>(null);
@@ -355,6 +360,23 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
       keyFeedbackTimerRef.current = null;
     }
   }, []);
+
+  const isFiniteMode = normalizedConfig.modeLength !== "endless";
+  const totalQuestions = typeof normalizedConfig.modeLength === "number" ? normalizedConfig.modeLength : 0;
+
+  const finishRound = useCallback(() => {
+    setGameState("finished");
+    setFinishedTime(Date.now());
+    setIsTransitioning(false);
+  }, []);
+
+  const checkShouldFinish = useCallback(
+    (nextScore: number) => {
+      if (!isFiniteMode) return false;
+      return nextScore >= totalQuestions;
+    },
+    [isFiniteMode, totalQuestions],
+  );
 
   const applyQuestion = useCallback(
     (question: QuestionPayload) => {
@@ -399,6 +421,7 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
 
   const handleFretClick = useCallback(
     async (stringIndex: number, fretIndex: number) => {
+      if (gameState !== "playing") return;
       if (mode === "identifyByPosition") return;
       if (isTransitioning) return;
 
@@ -429,30 +452,45 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
             const nextKeySet = new Set(next.map(toPositionKey));
             const allMatched = question.validAnswers.every((pos) => nextKeySet.has(toPositionKey(pos)));
             if (allMatched) {
-              setScore((prevScore) => prevScore + 1);
+              setScore((prevScore) => {
+                const nextScore = prevScore + 1;
+                if (checkShouldFinish(nextScore)) {
+                  finishRound();
+                  return nextScore;
+                }
+                setIsTransitioning(true);
+                transitionTimerRef.current = window.setTimeout(() => {
+                  pushNextQuestion();
+                  setIsTransitioning(false);
+                }, 400);
+                return nextScore;
+              });
               setCombo((prevCombo) => prevCombo + 1);
-              setIsTransitioning(true);
-              transitionTimerRef.current = window.setTimeout(() => {
-                pushNextQuestion();
-                setIsTransitioning(false);
-              }, 400);
             }
             return next;
           });
           return;
         }
 
-        setScore((prev) => prev + 1);
+        setScore((prev) => {
+          const nextScore = prev + 1;
+          if (checkShouldFinish(nextScore)) {
+            finishRound();
+            return nextScore;
+          }
+          setIsTransitioning(true);
+          transitionTimerRef.current = window.setTimeout(() => {
+            pushNextQuestion();
+            setIsTransitioning(false);
+          }, 400);
+          return nextScore;
+        });
         setCombo((prev) => prev + 1);
-        setIsTransitioning(true);
-        transitionTimerRef.current = window.setTimeout(() => {
-          pushNextQuestion();
-          setIsTransitioning(false);
-        }, 400);
         return;
       }
 
       wrongCountRef.current += 1;
+      setTotalErrors((prev) => prev + 1);
       if (clearFeedbackTimerRef.current !== null) window.clearTimeout(clearFeedbackTimerRef.current);
       setCombo(0);
       setQuestionFeedback("wrong");
@@ -464,11 +502,12 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
         setActiveFeedbackCell(null);
       }, 140);
     },
-    [clearTimers, isTransitioning, mode, playNote, pushNextQuestion],
+    [checkShouldFinish, clearTimers, finishRound, gameState, isTransitioning, mode, playNote, pushNextQuestion],
   );
 
   const handleNoteKeyClick = useCallback(
     (label: string) => {
+      if (gameState !== "playing") return;
       if (mode !== "identifyByPosition") return;
       if (isTransitioning) return;
 
@@ -481,17 +520,25 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
         setQuestionFeedback("correct");
         setNoteKeyFeedback({ state: "correct", label });
         setActiveFeedbackCell({ ...highlightedFret, state: "correct" });
-        setScore((prev) => prev + 1);
+        setScore((prev) => {
+          const nextScore = prev + 1;
+          if (checkShouldFinish(nextScore)) {
+            finishRound();
+            return nextScore;
+          }
+          setIsTransitioning(true);
+          transitionTimerRef.current = window.setTimeout(() => {
+            pushNextQuestion();
+            setIsTransitioning(false);
+          }, 400);
+          return nextScore;
+        });
         setCombo((prev) => prev + 1);
-        setIsTransitioning(true);
-        transitionTimerRef.current = window.setTimeout(() => {
-          pushNextQuestion();
-          setIsTransitioning(false);
-        }, 400);
         return;
       }
 
       wrongCountRef.current += 1;
+      setTotalErrors((prev) => prev + 1);
       setIdentifyWrongCount(wrongCountRef.current);
       setCombo(0);
       setQuestionFeedback("wrong");
@@ -503,7 +550,7 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
         setNoteKeyFeedback({ state: "idle", label: null });
       }, 180);
     },
-    [clearTimers, highlightedFret, isTransitioning, mode, pushNextQuestion],
+    [checkShouldFinish, clearTimers, finishRound, gameState, highlightedFret, isTransitioning, mode, pushNextQuestion],
   );
 
   useEffect(() => {
@@ -517,11 +564,47 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
     void playNote(toneParam);
   }, [mode, playNote]);
 
+  useEffect(() => {
+    setGameState("playing");
+    setStartTime(Date.now());
+    setFinishedTime(null);
+    setTotalErrors(0);
+  }, []);
+
   const replayCurrentQuestionAudio = useCallback(async () => {
     const question = currentQuestionRef.current;
     if (!question?.replayToneParam) return;
     await playNote(question.replayToneParam);
   }, [playNote]);
+
+  const restartGame = useCallback(() => {
+    clearTimers();
+    const firstQuestion =
+      mode === "circle"
+        ? buildCircleQuestion(0, normalizedConfig)
+        : mode === "interval"
+          ? buildIntervalQuestion(normalizedConfig)
+          : mode === "randomNote"
+            ? buildRandomNoteQuestion(normalizedConfig)
+            : mode === "arpeggio"
+              ? buildArpeggioQuestion(normalizedConfig)
+              : mode === "identifyByPosition"
+                ? buildIdentifyByPositionQuestion(normalizedConfig)
+                : buildListenAndLocateQuestion(normalizedConfig);
+    circleIndexRef.current = mode === "circle" ? 1 : 0;
+    setScore(0);
+    setCombo(0);
+    setIsTransitioning(false);
+    setGameState("playing");
+    setStartTime(Date.now());
+    setFinishedTime(null);
+    setTotalErrors(0);
+    applyQuestion(firstQuestion);
+  }, [applyQuestion, clearTimers, mode, normalizedConfig]);
+
+  const elapsedMs = (finishedTime ?? Date.now()) - startTime;
+  const durationSeconds = Number((elapsedMs / 1000).toFixed(1));
+  const accuracy = totalQuestions > 0 ? Number(((totalQuestions / (totalQuestions + totalErrors)) * 100).toFixed(1)) : 0;
 
   return {
     score,
@@ -536,8 +619,13 @@ export function useGameLogic(mode: PracticeMode, config: GameConfig) {
     noteKeyFeedback,
     noteHintLabel,
     identifyWrongCount,
+    gameState,
+    totalErrors,
+    durationSeconds,
+    accuracy,
     handleFretClick,
     handleNoteKeyClick,
     replayCurrentQuestionAudio,
+    restartGame,
   };
 }
