@@ -72,7 +72,14 @@ function ConfigPanel({ mode, onStart, onCancel }: ConfigPanelProps) {
   };
 
   const handleStart = () => {
-    onStart({ strings: selectedStrings, fretRanges: selectedFretRanges, modeLength, subOptions: selectedSubOptions, listenModeType });
+    onStart({
+      strings: selectedStrings,
+      fretRanges: selectedFretRanges,
+      modeLength,
+      subOptions: selectedSubOptions,
+      listenModeType,
+      isPremium: false,
+    });
   };
 
   const isValid = selectedStrings.length > 0 && selectedSubOptions.length > 0 && (mode !== "arpeggio" || selectedFretRanges.length > 0);

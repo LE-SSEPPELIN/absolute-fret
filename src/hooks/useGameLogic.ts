@@ -27,6 +27,7 @@ export type GameConfig = {
   modeLength: number | "endless";
   subOptions: string[];
   listenModeType: "hardcoreAll" | "pickOne";
+  isPremium: boolean;
 };
 
 type IntervalOption = {
@@ -55,6 +56,7 @@ const DEFAULT_GAME_CONFIG: GameConfig = {
   modeLength: 20,
   subOptions: [],
   listenModeType: "hardcoreAll",
+  isPremium: false,
 };
 const CIRCLE_OF_FOURTHS = ["C", "F", "A#", "D#", "G#", "C#", "F#", "B", "E", "A", "D", "G"] as const;
 const CIRCLE_OF_FIFTHS = ["C", "G", "D", "A", "E", "B", "F#", "C#", "G#", "D#", "A#", "F"] as const;

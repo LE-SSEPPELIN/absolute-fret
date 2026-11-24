@@ -28,7 +28,7 @@ const MODE_LABELS: Record<GamePracticeMode, string> = {
 function buildFretRangeDescription(selectedRangeIds: string[]): string {
   const orderedRanges = FRET_RANGE_OPTIONS.filter((item) => selectedRangeIds.includes(item.id));
   if (orderedRanges.length === 0 || orderedRanges.length === FRET_RANGE_OPTIONS.length) return "全指板";
-  return orderedRanges.map((item) => item.shortLabel).join(", ");
+  return orderedRanges.map((item) => item.label).join("、");
 }
 
 function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
@@ -58,8 +58,11 @@ function PracticeSession({ mode, config, onBack }: PracticeSessionProps) {
   const subtitle = useMemo(() => {
     if (mode === "identifyByPosition") return "看位识音 - 坐标模式";
     if (mode === "listenAndLocate") return "听音辨位 - 盲听模式";
+    if (mode === "circle") return config.subOptions.includes("P5") ? "五度圈练习" : "四度圈练习";
+    if (mode === "interval") return "音程练习";
+    if (mode === "randomNote") return "随机音寻找";
     const modeLabel = MODE_LABELS[mode];
-    const fretRangeText = mode === "arpeggio" ? buildFretRangeDescription(config.fretRanges) : "全指板";
+    const fretRangeText = buildFretRangeDescription(config.fretRanges);
     return `${modeLabel} - ${fretRangeText}`;
   }, [config.fretRanges, mode]);
 
